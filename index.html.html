@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ANTIVIOLENTÓMETRO PREPA UVM ZAPOPAN - MOBILE 3D</title>
+  <style>
+    :root {
+      --uvm-red: #CC0000;
+      --uvm-red-dark: #800000;
+      --uvm-gold: #FFB81C;
+      --uvm-black: #0d0d12;
+      --uvm-card-bg: #16161e;
+      --uvm-card-border: rgba(255, 184, 28, 0.35);
+      --uvm-white: #ffffff;
+      --uvm-gray: #a1a1aa;
+    }
+
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+
+    html, body { 
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--uvm-black); 
+      color: var(--uvm-white); 
+      overflow: hidden; 
+      height: 100dvh; height: 100vh; width: 100vw;
+      display: flex; flex-direction: column; 
+      user-select: none; -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    /* ENCABEZADO INSTITUCIONAL */
+    header {
+      background: linear-gradient(135deg, var(--uvm-red-dark) 0%, var(--uvm-red) 100%);
+      padding: max(10px, env(safe-area-inset-top)) 14px 10px 14px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 3px solid var(--uvm-gold);
+      z-index: 20; flex-shrink: 0;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+    }
+    .header-titles h1 { font-size: 13.5px; font-weight: 900; color: var(--uvm-white); text-transform: uppercase; letter-spacing: 0.8px; }
+    .header-titles p { font-size: 10px; color: var(--uvm-gold); font-weight: 600; }
+    .campus-badge { 
+      background: rgba(0, 0, 0, 0.3); color: var(--uvm-gold);
+      padding: 4px 10px; border-radius: 12px; font-size: 9.5px; font-weight: 800; 
+      border: 1px solid var(--uvm-gold); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* CONTENEDOR CANVA 3D */
+    #canvas-container { width: 100vw; flex-grow: 1; position: relative; touch-action: none; }
+    canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+
+    /* GUÍA INTUITIVA FLOTANTE */
+    #gesture-hint {
+      position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+      background: rgba(204, 0, 0, 0.9); border: 1.5px solid var(--uvm-gold);
+      color: var(--uvm-white); padding: 7px 16px; border-radius: 20px; font-size: 10.5px;
+      font-weight: 800; z-index: 12; pointer-events: none; box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+      display: flex; align-items: center; gap: 6px; white-space: nowrap;
+      animation: pulseHint 2s infinite ease-in-out; transition: opacity 0.5s ease;
+    }
+    @keyframes pulseHint {
+      0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.95; }
+      50% { transform: translateX(-50%) scale(1.04); opacity: 1; }
+    }
+
+    /* HUD SUPERIOR DESLIZABLE */
+    .hud-controls {
+      position: absolute; top: 10px; left: 0; right: 0; z-index: 10;
+      display: flex; gap: 8px; overflow-x: auto; padding: 0 12px 6px 12px;
+      scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    .hud-controls::-webkit-scrollbar { display: none; }
+
+    .btn-hud {
+      background: rgba(22, 22, 30, 0.92); color: var(--uvm-white); border: 1px solid var(--uvm-gold);
+      padding: 8px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: center;
+      gap: 6px; flex-shrink: 0; min-height: 38px; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      transition: all 0.2s; touch-action: manipulation;
+    }
+    .btn-hud:active { background: var(--uvm-red); color: var(--uvm-white); transform: scale(0.95); }
+    .btn-active { background: var(--uvm-red) !important; color: var(--uvm-white) !important; border-color: var(--uvm-gold) !important; box-shadow: 0 0 10px rgba(204, 0, 0, 0.6); }
+
+    /* PANEL INFERIOR MÓVIL (BOTTOM SHEET) */
+    #info-panel {
+      position: absolute; bottom: calc(52px + env(safe-area-inset-bottom));
+      left: 10px; right: 10px; background: rgba(22, 22, 30, 0.96);
+      border: 2px solid var(--uvm-gold); border-radius: 16px; padding: 14px;
+      z-index: 10; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      box-shadow: 0 -6px 25px rgba(0,0,0,0.85); max-height: 44vh; overflow-y: auto;
+      -webkit-overflow-scrolling: touch; transition: transform 0.3s ease, opacity 0.3s ease; touch-action: pan-y;
+    }
+    
+    .panel-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 184, 28, 0.25); padding-bottom: 6px; margin-bottom: 8px; gap: 8px; }
+    .panel-handle { width: 40px; height: 4px; background: var(--uvm-gold); border-radius: 2px; margin: 0 auto 8px auto; opacity: 0.8; }
+    #node-title { font-size: 13px; font-weight: 800; text-transform: uppercase; color: var(--uvm-gold); letter-spacing: 0.4px; flex-grow: 1; }
+
+    .node-nav-group { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.06); padding: 3px 6px; border-radius: 14px; border: 1px solid rgba(255, 184, 28, 0.3); }
+    .btn-nav-node { background: none; border: none; color: var(--uvm-gold); font-size: 14px; font-weight: bold; padding: 2px 6px; touch-action: manipulation; }
+    .node-counter { font-size: 9.5px; font-weight: 800; color: var(--uvm-white); }
+
+    .btn-close-panel {
+      background: rgba(255, 255, 255, 0.1); border: 1px solid var(--uvm-gold); color: var(--uvm-gold);
+      border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: bold; flex-shrink: 0; touch-action: manipulation;
+    }
+    .btn-close-panel:active { background: var(--uvm-red); color: var(--uvm-white); }
+
+    .btn-reset-view-action {
+      width: 100%; margin-top: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--uvm-gold);
+      color: var(--uvm-gold); padding: 8px 12px; border-radius: 10px; font-size: 10.5px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 6px; touch-action: manipulation;
+    }
+    .btn-reset-view-action:active { background: var(--uvm-gold); color: var(--uvm-black); }
+
+    .box-manifestation, .box-countermeasure { padding: 9px 11px; border-radius: 8px; font-size: 11px; line-height: 1.4; margin-bottom: 8px; }
+    .box-manifestation { background: rgba(204, 0, 0, 0.18); border-left: 3.5px solid var(--uvm-red); }
+    .box-countermeasure { background: rgba(255, 184, 28, 0.12); border-left: 3.5px solid var(--uvm-gold); margin-bottom: 6px; }
+    .box-manifestation strong { color: #ff6b6b; display: block; margin-bottom: 3px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+    .box-countermeasure strong { color: var(--uvm-gold); display: block; margin-bottom: 3px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+
+    /* BOTÓN MATRIZ DE 30 ACCIONES */
+    .drawer-toggle {
+      position: absolute; bottom: max(10px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+      z-index: 10; background: linear-gradient(135deg, var(--uvm-red-dark), var(--uvm-red)); color: var(--uvm-white);
+      border: 1px solid var(--uvm-gold); padding: 8px 20px; border-radius: 20px; font-size: 11px; font-weight: 800;
+      white-space: nowrap; min-height: 36px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); letter-spacing: 0.3px; touch-action: manipulation;
+    }
+
+    /* DRAWER MATRIZ DE 30 ACCIONES */
+    #matrix-drawer {
+      position: absolute; bottom: -100%; left: 0; width: 100%; height: 82vh; background: rgba(13, 13, 18, 0.98);
+      border-top: 3.5px solid var(--uvm-red); border-radius: 20px 20px 0 0; z-index: 25; backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px); transition: bottom 0.35s cubic-bezier(0.1, 0.9, 0.2, 1);
+      padding: 18px 16px max(25px, env(safe-area-inset-bottom)) 16px; display: flex; flex-direction: column; touch-action: pan-y;
+    }
+    #matrix-drawer.open { bottom: 0; }
+    .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .drawer-header h3 { color: var(--uvm-gold); font-size: 13.5px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; }
+    .close-btn { background: none; border: none; color: var(--uvm-white); font-size: 22px; padding: 4px; cursor: pointer; touch-action: manipulation; }
+
+    .matrix-grid { display: flex; flex-direction: column; gap: 12px; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 25px; }
+    .matrix-col { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px; border: 1px solid var(--uvm-card-border); }
+    .col-title { font-size: 10.5px; font-weight: 800; padding: 6px; text-align: center; border-radius: 6px; color: var(--uvm-white); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .m-item { font-size: 10px; padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); display: flex; justify-content: space-between; gap: 8px; }
+
+    /* MODALES MÓVILES */
+    .modal-overlay {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; height: 100vh;
+      background: rgba(0, 0, 0, 0.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      z-index: 30; display: none; justify-content: center; align-items: flex-end; touch-action: pan-y;
+    }
+    .modal-card {
+      background: var(--uvm-card-bg); border: 2px solid var(--uvm-gold); border-radius: 20px 20px 0 0;
+      width: 100%; max-height: 88vh; padding: 20px 20px max(25px, env(safe-area-inset-bottom)) 20px;
+      box-shadow: 0 -10px 35px rgba(0,0,0,0.95); overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .modal-title { 
+      font-size: 14px; font-weight: 800; color: var(--uvm-gold); text-transform: uppercase; margin-bottom: 14px; 
+      border-bottom: 1px solid rgba(255, 184, 28, 0.25); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px;
+    }
+
+    .algo-step { display: none; }
+    .algo-step.active { display: block; }
+    .step-badge { background: var(--uvm-red); color: var(--uvm-white); font-size: 9.5px; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; }
+
+    .algo-options { display: flex; flex-direction: column; gap: 9px; margin-top: 14px; }
+    .algo-btn {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255, 184, 28, 0.3); padding: 13px; border-radius: 10px;
+      color: var(--uvm-white); font-size: 11.5px; text-align: left; min-height: 46px; font-weight: 600; transition: all 0.2s; touch-action: manipulation;
+    }
+    .algo-btn:active { background: rgba(204, 0, 0, 0.3); border-color: var(--uvm-red); color: var(--uvm-white); }
+    .algo-result-box { background: rgba(255, 184, 28, 0.12); border: 1.5px solid var(--uvm-gold); padding: 14px; border-radius: 10px; margin-top: 12px; font-size: 11px; line-height: 1.45; color: var(--uvm-white); }
+
+    /* MURO CORTACIRCUITO MÓVIL Y MODO ORIENTADOR */
+    .wall-container { display: flex; flex-direction: column; gap: 14px; }
+    .wall-form { background: rgba(255,255,255,0.03); padding: 14px; border-radius: 10px; font-size: 11px; display: flex; flex-direction: column; gap: 9px; border: 1px solid var(--uvm-card-border); }
+    .wall-form input, .wall-form select, .wall-form textarea, #algo-relato-text {
+      background: #0f0f15; border: 1px solid rgba(255, 184, 28, 0.3); color: var(--uvm-white); padding: 10px; border-radius: 8px; font-size: 11px; width: 100%; -webkit-appearance: none;
+    }
+    .wall-form button { 
+      background: linear-gradient(135deg, var(--uvm-red-dark), var(--uvm-red)); color: var(--uvm-white); border: 1px solid var(--uvm-gold); 
+      padding: 12px; border-radius: 8px; font-weight: 800; min-height: 44px; text-transform: uppercase; letter-spacing: 0.5px; touch-action: manipulation;
+    }
+
+    .orientador-bar {
+      display: flex; justify-content: space-between; align-items: center; background: rgba(255, 184, 28, 0.1);
+      border: 1px solid var(--uvm-gold); padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 10px;
+    }
+    .btn-orientador-toggle {
+      background: var(--uvm-gold); color: var(--uvm-black); border: none; padding: 4px 10px; border-radius: 12px; font-weight: 800; font-size: 9.5px; text-transform: uppercase;
+    }
+
+    .postits-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 220px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .postit-card {
+      background: #fffbeb; color: #18181b; padding: 10px; border-radius: 6px; font-size: 10px; display: flex; flex-direction: column;
+      justify-content: space-between; min-height: 95px; border-left: 4px solid var(--uvm-gold); box-shadow: 0 2px 8px rgba(0,0,0,0.3); position: relative;
+    }
+    .postit-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed rgba(0,0,0,0.2); padding-bottom: 3px; }
+    .postit-author { font-weight: 800; font-size: 10px; color: var(--uvm-red-dark); }
+    .btn-delete-postit { background: #CC0000; color: #ffffff; border: none; border-radius: 4px; padding: 1px 5px; font-size: 9px; font-weight: bold; cursor: pointer; }
+    .postit-text { font-style: italic; margin: 4px 0; line-height: 1.25; }
+    .postit-tag { font-size: 8px; font-weight: 800; background: rgba(204, 0, 0, 0.1); color: var(--uvm-red); padding: 2px 5px; border-radius: 4px; align-self: flex-start; }
+  </style>
+
+  <!-- LIBRERÍAS THREE.JS Y ORBITCONTROLS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- SDK DE FIREBASE (LIBRERÍAS DE COMPATIBILIDAD WEB) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <!-- ENCABEZADO INSTITUCIONAL -->
+  <header>
+    <div class="header-titles">
+      <h1>ANTIVIOLENTÓMETRO PREPA UVM ZAPOPAN</h1>
+      <p>Ecosistema Interactivo 3D: Convivencia, Autonomía y Paz Activa</p>
+    </div>
+    <div class="campus-badge">Campus Zapopan</div>
+  </header>
+
+  <!-- LIENZO WEBGL -->
+  <div id="canvas-container">
+    
+    <!-- GUÍA INTUITIVA -->
+    <div id="gesture-hint">
+      <span>👆 Toca una esfera o arrastra para girar 360°</span>
+    </div>
+
+    <!-- CONTROLES HUD -->
+    <div class="hud-controls">
+      <button class="btn-hud" onclick="triggerHaptic(); toggleAutoRotate();">🔄 Rotación 360°</button>
+      <button class="btn-hud" onclick="triggerHaptic(); resetView();">🎯 Reorganizar Vista</button>
+      <button class="btn-hud btn-active" id="btn-mode" onclick="triggerHaptic(); toggleSimulationMode();">⚡ Modo: Cortacircuito UVM</button>
+      <button class="btn-hud" onclick="triggerHaptic(); openAlgoModal();">🔀 Algoritmo de Decisión</button>
+      <button class="btn-hud" onclick="triggerHaptic(); openWallModal();">📌 Muro Cortacircuito (Post-its)</button>
+    </div>
+
+    <!-- PANEL INFERIOR MÓVIL CON NAVEGACIÓN ENTRE NODOS -->
+    <div id="info-panel">
+      <div class="panel-handle"></div>
+      <div class="panel-header-row">
+        <div id="node-title">NÚCLEO CENTRAL UVM</div>
+        <div class="node-nav-group">
+          <button class="btn-nav-node" onclick="navigateNode(-1)">◄</button>
+          <span class="node-counter" id="node-counter-badge">0 / 5</span>
+          <button class="btn-nav-node" onclick="navigateNode(1)">►</button>
+        </div>
+        <button class="btn-close-panel" onclick="closeInfoPanel()">✖</button>
+      </div>
+      <div class="box-manifestation">
+        <strong>⚠️ Dinámica de Red No Lineal:</strong>
+        <p>Las agresiones no siguen un orden consecutivo. Un chiste o una exclusión alimentan en red la violencia física y estructural del salón.</p>
+      </div>
+      <div class="box-countermeasure">
+        <strong>🛡️ Principio Cortacircuito UVM:</strong>
+        <p>Haz clic o toca cualquier nodo orbital para enfocar la cámara y descubrir la contramedida exacta de buen trato.</p>
+      </div>
+      <button class="btn-reset-view-action" onclick="closeInfoPanel()">✖ Cerrar y volver a la vista general</button>
+    </div>
+
+    <!-- BOTÓN Y DRAWER MATRIZ COMPLETA DE 30 ACCIONES -->
+    <button class="drawer-toggle" onclick="triggerHaptic(); toggleDrawer();">📋 Ver Matriz Completa de 30 Acciones</button>
+
+    <div id="matrix-drawer">
+      <div class="drawer-header">
+        <h3>Matriz Restaurativa de 30 Acciones (Prepa UVM Zapopan)</h3>
+        <button class="close-btn" onclick="toggleDrawer()">✖</button>
+      </div>
+      <div class="matrix-grid">
+        <div class="matrix-col">
+          <div class="col-title" style="background: linear-gradient(135deg, #1b4332, #27ae60);">1. Cuida y Florece (1-8)</div>
+          <div class="m-item"><span>1. Humor empático</span><strong>Si hiere, no es broma</strong></div>
+          <div class="m-item"><span>2. Comunicación</span><strong>Pedir sin chantajear</strong></div>
+          <div class="m-item"><span>3. Honestidad</span><strong>Relación transparente</strong></div>
+          <div class="m-item"><span>4. Diálogo abierto</span><strong>Sin "ley del hielo"</strong></div>
+          <div class="m-item"><span>5. Confianza</span><strong>Cero posesión/celos</strong></div>
+          <div class="m-item"><span>6. Privacidad digital</span><strong>Respetar redes/chats</strong></div>
+          <div class="m-item"><span>7. Responsabilidad</span><strong>Asumir consecuencias</strong></div>
+          <div class="m-item"><span>8. Valoración mutua</span><strong>Reconocer virtudes</strong></div>
+        </div>
+        <div class="matrix-col">
+          <div class="col-title" style="background: linear-gradient(135deg, #5c2018, #d35400);">2. Actúa y Desmantela (9-22)</div>
+          <div class="m-item"><span>9-11. Burlas/Apodos</span><strong>Respaldo de grupo</strong></div>
+          <div class="m-item"><span>12. Control/Celos</span><strong>Exigir autonomía</strong></div>
+          <div class="m-item"><span>13. Cosas ajenas</span><strong>Reparar los daños</strong></div>
+          <div class="m-item"><span>14-15. Consentimiento</span><strong>Respetar el "NO"</strong></div>
+          <div class="m-item"><span>16-20. Golpes "jugando"</span><strong>Autorregulación</strong></div>
+          <div class="m-item"><span>21. Aislamiento</span><strong>Inclusión activa</strong></div>
+          <div class="m-item"><span>22. Sextorsión</span><strong>Guardar evidencia</strong></div>
+        </div>
+        <div class="matrix-col">
+          <div class="col-title" style="background: linear-gradient(135deg, #800000, #CC0000);">3. Protege y Denuncia (23-30)</div>
+          <div class="m-item"><span>23. Armas/Objetos</span><strong>Auxilio inmediato</strong></div>
+          <div class="m-item"><span>24. Ley Olimpia</span><strong>Denuncia digital</strong></div>
+          <div class="m-item"><span>25. Amenazas graves</span><strong>Protocolo directivo</strong></div>
+          <div class="m-item"><span>26-28. Abuso sexual</span><strong>Denuncia penal/salud</strong></div>
+          <div class="m-item"><span>29-30. Riesgo de vida</span><strong>Resguardo urgente</strong></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL ALGORITMO -->
+  <div class="modal-overlay" id="algo-modal">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span>🔀 Algoritmo de Decisión entre Pares</span>
+        <button class="close-btn" onclick="closeAlgoModal()">✖</button>
+      </div>
+
+      <div class="algo-step active" id="algo-step-1">
+        <span class="step-badge">Paso 1 de 3: Identifica la Tensión</span>
+        <p style="font-size:11.5px; color:#a1a1aa; margin-top:10px;">¿Qué tipo de conducta estás presenciando o experimentando en el salón de clase?</p>
+        <div class="algo-options">
+          <button class="algo-btn" onclick="goAlgoStep2('cultural')">🗣️ Burlas, chistes machistas/racistas, apodos o "novatadas" (Nodo 5: Cultural)</button>
+          <button class="algo-btn" onclick="goAlgoStep2('simbolica')">❄️ Ley del hielo, memes/stickers de burla o exclusión (Nodo 4: Simbólica)</button>
+          <button class="algo-btn" onclick="goAlgoStep2('estructural')">👥 Monopolio de lugares, no dejar entrar a equipos o imponer reglas (Nodo 3: Estructural)</button>
+          <button class="algo-btn" onclick="goAlgoStep2('directa')">💥 Empujones, peleas, insultos directos o acoso en redes (Nodo 2: Directa)</button>
+          <button class="algo-btn" onclick="goAlgoStep2('agresividad')">😡 Gritos, descontrol, dar portazos o aventar útiles por ira (Nodo 1: Impulsos)</button>
+        </div>
+      </div>
+
+      <div class="algo-step" id="algo-step-2">
+        <span class="step-badge">Paso 2 de 3: Selección de Contramedida</span>
+        <div id="algo-step-2-content"></div>
+      </div>
+
+      <div class="algo-step" id="algo-step-3">
+        <span class="step-badge">Paso 3 de 3: Valida, Relata y Escala</span>
+        <div class="algo-result-box" id="algo-result-content"></div>
+        
+        <div style="margin-top: 12px;">
+          <label style="color:var(--uvm-gold); font-size:10.5px; font-weight:bold; display:block; margin-bottom:5px;">
+            📝 Relato breve de la situación e intervención realizada:
+          </label>
+          <textarea id="algo-relato-text" rows="3" placeholder="Describe brevemente qué sucedió y cómo se intervino para desmantelar el conflicto..."></textarea>
+        </div>
+
+        <div style="margin-top:14px; display:flex; justify-content:space-between; gap:8px;">
+          <button class="btn-hud" onclick="resetAlgoModal()">🔄 Nuevo Diagnóstico</button>
+          <button class="btn-hud" id="btn-escalar-uvm" style="background:var(--uvm-red); border-color:var(--uvm-gold);" onclick="enviarReporteAOrientacion()">🚨 Escalar a Orientación UVM</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL MURO CORTACIRCUITO / POST-ITS -->
+  <div class="modal-overlay" id="wall-modal">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span>📌 Muro Cortacircuito: Post-its</span>
+        <button class="close-btn" onclick="closeWallModal()">✖</button>
+      </div>
+
+      <div class="orientador-bar">
+        <span id="orientador-status-text">👤 Vista Alumno (Lectura y publicación)</span>
+        <button class="btn-orientador-toggle" onclick="toggleOrientadorMode()">🔑 Modo Orientador</button>
+      </div>
+
+      <div class="wall-container">
+        <div class="wall-form">
+          <strong style="color:var(--uvm-gold);">Agradece a quien cortó el circuito esta semana:</strong>
+          <div>
+            <label>Para quién / Equipo:</label>
+            <input type="text" id="postit-author" placeholder="Ej. Carlos M. o Equipo 3">
+          </div>
+          <div>
+            <label>Nodo Desmantelado:</label>
+            <select id="postit-node">
+              <option value="Nodo 5: Cultural">Nodo 5: Cultural (Frenó chiste/burla)</option>
+              <option value="Nodo 4: Simbólica">Nodo 4: Simbólica (Incluyó al equipo)</option>
+              <option value="Nodo 3: Estructural">Nodo 3: Estructural (Mediación/Diálogo)</option>
+              <option value="Nodo 2: Directa">Nodo 2: Directa (Puso límites asertivos)</option>
+              <option value="Nodo 1: Impulsos">Nodo 1: Impulsos (Pausa activa)</option>
+            </select>
+          </div>
+          <div>
+            <label>Mensaje de Agradecimiento:</label>
+            <textarea id="postit-text" rows="3" placeholder="Escribe qué acción concreta de buen trato realizó..."></textarea>
+          </div>
+          <button onclick="addPostit()">Publicar Post-it en el Muro</button>
+        </div>
+
+        <div class="postits-board" id="postits-board"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // CONFIGURACIÓN ORIENTACIÓN & FIREBASE
+    // ==========================================
+    const CORREO_ORIENTADOR = "luis.lopezper@uvmnet.edu";
+    const CLAVE_ORIENTADOR = "uvm2026";
+    let isOrientadorMode = false;
+    let planCortacircuitoActual = "Consulta general desde Antiviolentómetro 3D.";
+    let activeNodeIndex = 0;
+
+    // CREDENCIALES DE TU PROYECTO FIREBASE
+    const firebaseConfig = {
+  apiKey: "AIzaSyDE7Fe2umeSmoKuFiqzjyxk-5vQZiI3pms",
+  authDomain: "antoviolentometrouvm.firebaseapp.com",
+  projectId: "antoviolentometrouvm",
+  storageBucket: "antoviolentometrouvm.firebasestorage.app",
+  messagingSenderId: "276380615378",
+  appId: "1:276380615378:web:ba47904bdb6098ce4b230b",
+  measurementId: "G-BBVHBEL9WV"
+};
+
+    let db = null;
+    let postitsRef = null;
+
+    function initFirebase() {
+      if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "REEMPLAZAR_CON_TU_API_KEY") {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.database();
+        postitsRef = db.ref('postits');
+        listenToFirebasePostits();
+      } else {
+        console.warn("Firebase no configurado. Usando almacenamiento local (localStorage).");
+        loadLocalStoragePostits();
+      }
+    }
+
+    const nodesData = [
+      { id: 0, name: "NÚCLEO CENTRAL UVM", color: 0x27ae60, pos: [0, 0, 0], size: 3.2, manifestation: "Centro de convergencia: Aquí se acumula la Violencia Híbrida si la red no es atendida.", countermeasure: "Desmantelamiento continuo mediante la cultura de paz y buen trato de Prepa UVM Zapopan." },
+      { id: 1, name: "1. Agresividad e Impulsos", color: 0xe74c3c, pos: [0, 11, 0], size: 2.1, manifestation: "• Gritos, portazos y aventar bancas.<br>• Reacciones de ira ante la frustración en clase.<br>• Discusiones explosivas sin autorregulación.", countermeasure: "• Pausa activa y respiración guiada.<br>• Retirarse a tiempo para recuperar la calma.<br>• Reparación del daño mediante disculpa auténtica." },
+      { id: 2, name: "2. Violencia Directa", color: 0xe67e22, pos: [11, 3.5, 4], size: 2.1, manifestation: "• Empujones, peleas físicas o jaloneos.<br>• Apodos hirientes y difamación.<br>• Cyberbullying y grupos de desprecio en WhatsApp.", countermeasure: "• Frenar la agresión con firmeza asertiva.<br>• Brindar respaldo inmediato a la víctima.<br>• Reporte confidencial en Orientación Educativa UVM." },
+      { id: 3, name: "3. Violencia Estructural", color: 0x2980b9, pos: [6.5, -8.5, -5], size: 2.1, manifestation: "• Exclusión sistemática de equipos de trabajo.<br>• Monopolio de lugares y recursos del salón.<br>• Imposición de reglas por parte de subgrupos.", countermeasure: "• Mediación de pares y comités de salón.<br>• Acuerdos de convivencia votados por el grupo.<br>• Rondas equitativas de participación e integración." },
+      { id: 4, name: "4. Violencia Simbólica", color: 0x8e44ad, pos: [-6.5, -8.5, 5], size: 2.1, manifestation: "• 'Ley del hielo' e ignorar la presencia de alguien.<br>• Memes/stickers para ridiculizar el aspecto.<br>• Prejuicios sobre promedio o estilo personal.", countermeasure: "• Rotación obligatoria de roles de liderazgo.<br>• Inclusión activa de compañeros aislados.<br>• Valorar las diferencias y frenar estereotipos." },
+      { id: 5, name: "5. Violencia Cultural", color: 0xd35400, pos: [-11, 3.5, -4], size: 2.1, manifestation: "• Chistes machistas, racistas o clasistas.<br>• Justificar abusos con 'así nos llevamos'.<br>• Normalizar 'novatadas' o burlas en el aula.", countermeasure: "• Cuestionar el chiste ('¿por qué da risa?').<br>• Romper la complicidad del silencio en el grupo.<br>• Promover un lenguaje inclusivo y de buen trato." }
+    ];
+
+    function triggerHaptic() {
+      if (navigator.vibrate) navigator.vibrate(15);
+    }
+
+    function hideGestureHint() {
+      const hint = document.getElementById('gesture-hint');
+      if (hint && hint.style.opacity !== '0') {
+        hint.style.opacity = '0';
+        setTimeout(() => hint.style.display = 'none', 500);
+      }
+    }
+
+    // --- ESCENA THREE.JS ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0d0d12, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+    const initialCamPos = new THREE.Vector3(0, 14, 38);
+    camera.position.copy(initialCamPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "default" });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 1.0;
+
+    controls.addEventListener('start', hideGestureHint);
+
+    window.addEventListener('resize', () => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const centerLight = new THREE.PointLight(0x27ae60, 2.5, 50);
+    centerLight.position.set(0, 0, 0);
+    scene.add(centerLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(20, 30, 20);
+    scene.add(dirLight);
+
+    const networkGroup = new THREE.Group();
+    scene.add(networkGroup);
+
+    const meshNodes = [];
+    const particlesFlow = [];
+    let isCortacircuitoMode = true;
+
+    function drawRoundedRect(ctx, x, y, width, height, radius) {
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x, y, width, height, radius);
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + width, y, x + width, y + height, radius);
+        ctx.arcTo(x + width, y + height, x, y + height, radius);
+        ctx.arcTo(x, y + height, x, y, radius);
+        ctx.arcTo(x, y, x + width, y, radius);
+        ctx.closePath();
+      }
+    }
+
+    function createTextSprite(text, colorHex) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512; canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = "rgba(22, 22, 30, 0.9)";
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 6;
+      drawRoundedRect(ctx, 10, 10, 492, 108, 20);
+      ctx.fill(); ctx.stroke();
+
+      ctx.font = "Bold 26px Arial, sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(text, 256, 64);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.scale.set(7.5, 1.85, 1);
+      return sprite;
+    }
+
+    nodesData.forEach(data => {
+      const geo = new THREE.SphereGeometry(data.size, 32, 32);
+      const mat = new THREE.MeshStandardMaterial({
+        color: data.color, roughness: 0.2, metalness: 0.4, emissive: data.color, emissiveIntensity: data.id === 0 ? 0.6 : 0.25
+      });
+      const sphere = new THREE.Mesh(geo, mat);
+      sphere.position.set(...data.pos);
+      sphere.userData = data;
+      networkGroup.add(sphere);
+      meshNodes.push(sphere);
+
+      const spriteLabel = createTextSprite(data.name, '#' + data.color.toString(16));
+      spriteLabel.position.set(data.pos[0], data.pos[1] + data.size + 1.8, data.pos[2]);
+      networkGroup.add(spriteLabel);
+    });
+
+    for (let i = 1; i < meshNodes.length; i++) {
+      const curve = new THREE.LineCurve3(meshNodes[0].position, meshNodes[i].position);
+      const tubeGeo = new THREE.TubeGeometry(curve, 20, 0.08, 8, false);
+      const tubeMat = new THREE.MeshBasicMaterial({ color: 0x7f8c8d, transparent: true, opacity: 0.4 });
+      networkGroup.add(new THREE.Mesh(tubeGeo, tubeMat));
+
+      for (let p = 0; p < 3; p++) {
+        const pGeo = new THREE.SphereGeometry(0.25, 16, 16);
+        const pMat = new THREE.MeshBasicMaterial({ color: 0x27ae60 });
+        const pMesh = new THREE.Mesh(pGeo, pMat);
+        networkGroup.add(pMesh);
+        particlesFlow.push({ mesh: pMesh, curve: curve, progress: Math.random(), speed: 0.005 + Math.random() * 0.005 });
+      }
+    }
+
+    // --- INTERACCIÓN TÁCTIL ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let pointerDownPos = { x: 0, y: 0 };
+    let targetCameraPos = null;
+    let targetLookAt = new THREE.Vector3(0, 0, 0);
+
+    function getEventClientCoordinates(e) {
+      if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      if (e.changedTouches && e.changedTouches.length > 0) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+      return { x: e.clientX, y: e.clientY };
+    }
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      const coords = getEventClientCoordinates(e);
+      pointerDownPos.x = coords.x; pointerDownPos.y = coords.y;
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (e.target !== renderer.domElement) return;
+      const coords = getEventClientCoordinates(e);
+      const deltaX = Math.abs(coords.x - pointerDownPos.x);
+      const deltaY = Math.abs(coords.y - pointerDownPos.y);
+
+      if (deltaX < 12 && deltaY < 12) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((coords.x - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((coords.y - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(meshNodes);
+
+        if (intersects.length > 0) {
+          hideGestureHint();
+          triggerHaptic();
+          const selectedMesh = intersects[0].object;
+          const data = selectedMesh.userData;
+          
+          activeNodeIndex = data.id;
+          highlightActiveNode(selectedMesh);
+          updateInfoPanel(data);
+
+          const nodePos = selectedMesh.position;
+          targetLookAt.copy(nodePos);
+          targetCameraPos = new THREE.Vector3(
+            nodePos.x * 1.8 + (nodePos.x === 0 ? 0 : 4),
+            nodePos.y * 1.8 + 3,
+            nodePos.z * 1.8 + 12
+          );
+        }
+      }
+    });
+
+    function highlightActiveNode(activeMesh) {
+      meshNodes.forEach(mesh => {
+        if (mesh === activeMesh) {
+          mesh.scale.set(1.3, 1.3, 1.3);
+          mesh.material.emissiveIntensity = 0.8;
+        } else {
+          mesh.scale.set(1.0, 1.0, 1.0);
+          mesh.material.emissiveIntensity = mesh.userData.id === 0 ? 0.6 : 0.25;
+        }
+      });
+    }
+
+    function updateInfoPanel(data) {
+      const panel = document.getElementById('info-panel');
+      panel.style.display = 'block';
+      panel.style.borderColor = '#' + data.color.toString(16);
+
+      panel.innerHTML = `
+        <div class="panel-handle"></div>
+        <div class="panel-header-row">
+          <div id="node-title" style="color:#${data.color.toString(16)}">${data.name}</div>
+          <div class="node-nav-group">
+            <button class="btn-nav-node" onclick="navigateNode(-1)">◄</button>
+            <span class="node-counter">${data.id} / ${nodesData.length - 1}</span>
+            <button class="btn-nav-node" onclick="navigateNode(1)">►</button>
+          </div>
+          <button class="btn-close-panel" onclick="closeInfoPanel()">✖</button>
+        </div>
+        <div class="box-manifestation">
+          <strong>⚠️ Manifestaciones en el Salón:</strong>
+          <p>${data.manifestation}</p>
+        </div>
+        <div class="box-countermeasure">
+          <strong>🛡️ Acción Antiviolentómetro UVM:</strong>
+          <p>${data.countermeasure}</p>
+        </div>
+        <button class="btn-reset-view-action" onclick="closeInfoPanel()">✖ Cerrar y volver a la vista general</button>
+      `;
+    }
+
+    function navigateNode(direction) {
+      triggerHaptic();
+      activeNodeIndex += direction;
+      if (activeNodeIndex < 0) activeNodeIndex = nodesData.length - 1;
+      if (activeNodeIndex >= nodesData.length) activeNodeIndex = 0;
+
+      const selectedMesh = meshNodes[activeNodeIndex];
+      const data = selectedMesh.userData;
+
+      highlightActiveNode(selectedMesh);
+      updateInfoPanel(data);
+
+      const nodePos = selectedMesh.position;
+      targetLookAt.copy(nodePos);
+      targetCameraPos = new THREE.Vector3(
+        nodePos.x * 1.8 + (nodePos.x === 0 ? 0 : 4),
+        nodePos.y * 1.8 + 3,
+        nodePos.z * 1.8 + 12
+      );
+    }
+
+    function closeInfoPanel() {
+      triggerHaptic();
+      document.getElementById('info-panel').style.display = 'none';
+      meshNodes.forEach(m => {
+        m.scale.set(1, 1, 1);
+        m.material.emissiveIntensity = m.userData.id === 0 ? 0.6 : 0.25;
+      });
+      resetView();
+    }
+
+    function toggleAutoRotate() { controls.autoRotate = !controls.autoRotate; }
+    function resetView() {
+      targetCameraPos = initialCamPos.clone();
+      targetLookAt.set(0, 0, 0);
+      controls.target.set(0, 0, 0);
+    }
+
+    function toggleSimulationMode() {
+      isCortacircuitoMode = !isCortacircuitoMode;
+      const btn = document.getElementById('btn-mode');
+      if (isCortacircuitoMode) {
+        btn.innerText = "⚡ Modo: Cortacircuito UVM";
+        btn.classList.add('btn-active');
+        particlesFlow.forEach(p => p.mesh.material.color.setHex(0x27ae60));
+        centerLight.color.setHex(0x27ae60);
+      } else {
+        btn.innerText = "⚠️ Modo: Flujo de Violencia";
+        btn.classList.remove('btn-active');
+        particlesFlow.forEach(p => p.mesh.material.color.setHex(0xe74c3c));
+        centerLight.color.setHex(0xe74c3c);
+      }
+    }
+
+    function toggleDrawer() { document.getElementById('matrix-drawer').classList.toggle('open'); }
+
+    // ==========================================
+    // ALGORITMO Y MODALES
+    // ==========================================
+    function openAlgoModal() { document.getElementById('algo-modal').style.display = 'flex'; }
+    function closeAlgoModal() { document.getElementById('algo-modal').style.display = 'none'; }
+    function resetAlgoModal() {
+      document.getElementById('algo-step-1').classList.add('active');
+      document.getElementById('algo-step-2').classList.remove('active');
+      document.getElementById('algo-step-3').classList.remove('active');
+      const relatoInput = document.getElementById('algo-relato-text');
+      if (relatoInput) relatoInput.value = '';
+    }
+
+    function goAlgoStep2(type) {
+      triggerHaptic();
+      document.getElementById('algo-step-1').classList.remove('active');
+      document.getElementById('algo-step-2').classList.add('active');
+      const content = document.getElementById('algo-step-2-content');
+
+      let optionsHTML = "";
+      if(type === 'cultural') {
+        optionsHTML = `
+          <p style="font-size:11.5px; color:#a1a1aa; margin-bottom:10px;">Nodo 5 (Cultural) Detectado. Selecciona la acción restaurativa recomendada:</p>
+          <div class="algo-options">
+            <button class="algo-btn" onclick="goAlgoStep3('Cuestionar la burla inmediatamente preguntando «¿Por qué da risa?» (Acción 1)')">A. Cuestionar la burla en el momento y no reírse.</button>
+            <button class="algo-btn" onclick="goAlgoStep3('Promover el lenguaje inclusivo y de buen trato en la conversación (Acción 8)')">B. Promover lenguaje de buen trato y respeto mutuo.</button>
+          </div>
+        `;
+      } else if(type === 'simbolica') {
+        optionsHTML = `
+          <p style="font-size:11.5px; color:#a1a1aa; margin-bottom:10px;">Nodo 4 (Simbólica) Detectado. Selecciona la acción restaurativa recomendada:</p>
+          <div class="algo-options">
+            <button class="algo-btn" onclick="goAlgoStep3('Inclusión activa inmediata rompiendo el aislamiento (Acción 21)')">A. Invitar activamente al compañero al equipo o mesa.</button>
+            <button class="algo-btn" onclick="goAlgoStep3('Rotación equitativa de roles para evitar exclusiones (Acción 4)')">B. Acordar rotación de roles sin prejuicios.</button>
+          </div>
+        `;
+      } else if(type === 'estructural') {
+        optionsHTML = `
+          <p style="font-size:11.5px; color:#a1a1aa; margin-bottom:10px;">Nodo 3 (Estructural) Detectado. Selecciona la acción restaurativa:</p>
+          <div class="algo-options">
+            <button class="algo-btn" onclick="goAlgoStep3('Convocatoria a diálogo entre pares para reorganizar lugares o reglas (Acción 3)')">A. Abrir mesa de diálogo y votar acuerdos del salón.</button>
+            <button class="algo-btn" onclick="goAlgoStep3('Uso equitativo de espacios y bienes comunitarios (Acción 13)')">B. Establecer turnos para el uso de bancas y materiales.</button>
+          </div>
+        `;
+      } else if(type === 'directa') {
+        optionsHTML = `
+          <p style="font-size:11.5px; color:#a1a1aa; margin-bottom:10px;">Nodo 2 (Violencia Directa) Detectado. Selecciona la acción inmediata:</p>
+          <div class="algo-options">
+            <button class="algo-btn" onclick="goAlgoStep3('Intervención con firmeza asertiva y respaldo a la víctima (Acción 9)')">A. Decir «Alto» con firmeza y acompañar a la persona.</button>
+            <button class="algo-btn" onclick="goAlgoStep3('Reporte confidencial directo a Orientación Educativa UVM (Acción 25)')">B. Reportar inmediatamente al equipo directivo/orientación.</button>
+          </div>
+        `;
+      } else {
+        optionsHTML = `
+          <p style="font-size:11.5px; color:#a1a1aa; margin-bottom:10px;">Nodo 1 (Impulsos) Detectado. Selecciona la acción restaurativa:</p>
+          <div class="algo-options">
+            <button class="algo-btn" onclick="goAlgoStep3('Pausa activa, alejamiento estratégico y respiración 4x4 (Acción 16)')">A. Activar la pausa de descompresión antes de responder.</button>
+            <button class="algo-btn" onclick="goAlgoStep3('Disculpa auténtica y reparación del daño material/emocional (Acción 7)')">B. Asumir responsabilidad y ofrecer disculpa sincera.</button>
+          </div>
+        `;
+      }
+      content.innerHTML = optionsHTML;
+    }
+
+    function goAlgoStep3(solution) {
+      triggerHaptic();
+      planCortacircuitoActual = solution;
+      document.getElementById('algo-step-2').classList.remove('active');
+      document.getElementById('algo-step-3').classList.add('active');
+      document.getElementById('algo-result-content').innerHTML = `
+        <strong>✅ Plan Cortacircuito Seleccionado:</strong><br>
+        ${solution}
+      `;
+    }
+
+    function enviarReporteAOrientacion() {
+      triggerHaptic();
+      const relato = document.getElementById('algo-relato-text').value;
+      const asunto = encodeURIComponent("REPORTE CORTACIRCUITO UVM - ANTIVIOLENTÓMETRO 3D MOBILE");
+      const cuerpo = encodeURIComponent(`Hola Orientación Educativa Prepa UVM Zapopan,\n\nSe solicita apoyo con respecto a la siguiente situación:\n\n• Diagnóstico / Plan: ${planCortacircuitoActual}\n• Relato / Detalle: ${relato || "Sin detalle proporcionado"}\n\nEnviado desde la App Mobile Antiviolentómetro 3D.`);
+      const mailtoUrl = `mailto:${CORREO_ORIENTADOR}?subject=${asunto}&body=${cuerpo}`;
+      
+      const tempLink = document.createElement('a');
+      tempLink.href = mailtoUrl;
+      tempLink.target = '_blank';
+      tempLink.click();
+    }
+
+    // ==========================================
+    // MURO EN TIEMPO REAL CON FIREBASE
+    // ==========================================
+    let postitsData = [];
+
+    function openWallModal() {
+      document.getElementById('wall-modal').style.display = 'flex';
+    }
+    function closeWallModal() { document.getElementById('wall-modal').style.display = 'none'; }
+
+    // Sincronización continua en tiempo real con Firebase Realtime Database
+    function listenToFirebasePostits() {
+      if (!postitsRef) return;
+      postitsRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        postitsData = [];
+        if (data) {
+          Object.keys(data).forEach(key => {
+            postitsData.push({
+              id: key,
+              ...data[key]
+            });
+          });
+          // Ordenar los mensajes del más reciente al más antiguo
+          postitsData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        }
+        renderPostits();
+      });
+    }
+
+    // Respaldo local si no se han cargado credenciales de Firebase
+    function loadLocalStoragePostits() {
+      const saved = localStorage.getItem('uvm_antiviolentometro_postits');
+      if (saved) {
+        try { postitsData = JSON.parse(saved); } catch(e) { postitsData = []; }
+      }
+      renderPostits();
+    }
+
+    function saveLocalStoragePostits() {
+      localStorage.setItem('uvm_antiviolentometro_postits', JSON.stringify(postitsData));
+    }
+
+    function renderPostits() {
+      const board = document.getElementById('postits-board');
+      board.innerHTML = '';
+
+      postitsData.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'postit-card';
+        card.innerHTML = `
+          <div class="postit-header">
+            <span class="postit-author">Para: ${item.author}</span>
+            ${isOrientadorMode ? `<button class="btn-delete-postit" onclick="deletePostit('${item.id}')">🗑️</button>` : ''}
+          </div>
+          <div class="postit-text">"${item.text}"</div>
+          <div class="postit-tag">${item.node}</div>
+        `;
+        board.appendChild(card);
+      });
+    }
+
+    function addPostit() {
+      triggerHaptic();
+      const author = document.getElementById('postit-author').value || "Anónimo";
+      const node = document.getElementById('postit-node').value;
+      const text = document.getElementById('postit-text').value;
+
+      if(!text.trim()) {
+        alert("Por favor escribe un mensaje de agradecimiento.");
+        return;
+      }
+
+      const newPostit = {
+        author: author,
+        node: node,
+        text: text,
+        timestamp: Date.now()
+      };
+
+      if (postitsRef) {
+        // Guarda en el repositorio virtual compartido en la nube
+        postitsRef.push(newPostit);
+      } else {
+        // Guarda localmente
+        newPostit.id = Date.now();
+        postitsData.unshift(newPostit);
+        saveLocalStoragePostits();
+        renderPostits();
+      }
+
+      document.getElementById('postit-text').value = '';
+      document.getElementById('postit-author').value = '';
+    }
+
+    function deletePostit(id) {
+      triggerHaptic();
+      if(confirm("¿Confirmas la eliminación de este mensaje del Muro?")) {
+        if (postitsRef && typeof id === 'string' && id.startsWith('-')) {
+          // Elimina en la base de datos centralizada de Firebase
+          db.ref('postits/' + id).remove();
+        } else {
+          // Elimina localmente
+          postitsData = postitsData.filter(p => p.id !== id);
+          saveLocalStoragePostits();
+          renderPostits();
+        }
+      }
+    }
+
+    function toggleOrientadorMode() {
+      triggerHaptic();
+      if (!isOrientadorMode) {
+        const pass = prompt("Ingresa la Clave de Acceso Orientación UVM:");
+        if (pass === CLAVE_ORIENTADOR) {
+          isOrientadorMode = true;
+          document.getElementById('orientador-status-text').innerText = "🔑 Modo Orientador Activo (Edición / Borrado)";
+          document.querySelector('.btn-orientador-toggle').innerText = "🔒 Salir de Orientador";
+          renderPostits();
+        } else if (pass !== null) {
+          alert("Clave incorrecta.");
+        }
+      } else {
+        isOrientadorMode = false;
+        document.getElementById('orientador-status-text').innerText = "👤 Vista Alumno (Lectura y publicación)";
+        document.querySelector('.btn-orientador-toggle').innerText = "🔑 Modo Orientador";
+        renderPostits();
+      }
+    }
+
+    // Inicialización al cargar
+    initFirebase();
+
+    // ANIMACIÓN ESCENA 3D
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+
+      particlesFlow.forEach(p => {
+        p.progress += p.speed;
+        if (p.progress > 1) p.progress = 0;
+        const pt = p.curve.getPoint(p.progress);
+        p.mesh.position.copy(pt);
+      });
+
+      if (targetCameraPos) {
+        camera.position.lerp(targetCameraPos, 0.06);
+        controls.target.lerp(targetLookAt, 0.06);
+        if (camera.position.distanceTo(targetCameraPos) < 0.1) {
+          targetCameraPos = null;
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
